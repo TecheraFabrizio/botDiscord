@@ -12,23 +12,9 @@ async def on_ready():
     print("Bot is ready")
 
 
-@client.command()
-async def showMyTroops(ctx):
-    await open_account(ctx.author)
-    user = ctx.author
-    users = await get_users_data()
-
-    em = discord.Embed(title=f"{ctx.author.name}'s troops formation info", color=discord.Color.red())
-
-    for troopIndex in range(0, 6):
-        em.add_field(name=users[str(user.id)]["Formation"]["names"][troopIndex],
-                     value="Lvl " + str(users[str(user.id)]["Formation"]["lvls"][troopIndex]))
-
-    await ctx.send(embed=em)
-
 
 @client.command()
-async def showTroopsOf(ctx, member: discord.Member):
+async def showT(ctx, member: discord.Member):
     await open_account(member)
 
     user = member
@@ -45,12 +31,12 @@ async def showTroopsOf(ctx, member: discord.Member):
 
 @client.command()
 async def info(ctx):
-    await ctx.send("1-Edit your formation: e!setTroop index(0-5) troopName troopLvl(1-80)")
-    await ctx.send("2-Show your formation: e!showMyTroops")
-    await ctx.send("3-Watch any player formation: e!showTroopsOf @AnyPlayerName")
+    await ctx.send("1-Set troops: e!setT index(1-6) troopName troopLvl(1-80)")
+    await ctx.send("2-Show Troops: e!showT @AnyPlayerName")
 
 @client.command()
-async def setTroop(ctx, index=None, name=None, lvl=None):
+async def setT(ctx, index=None, name=None, lvl=None):
+
     await open_account(ctx.author)
     try:
         index = int(index)
@@ -59,12 +45,24 @@ async def setTroop(ctx, index=None, name=None, lvl=None):
         await ctx.send("index or lvl wrongly typed or missing")
         return
 
+    index = index - 1
+
     if (index is None) or (name is None) or (lvl is None):
         await ctx.send("Check your index, name or lvl something is missing")
         return
     elif (index < 0) or (index > 5):
-        await ctx.send("Index needs to be between 0 and 5")
+        await ctx.send("Index needs to be between 1 and 6")
         return
+
+    if lvl < 1 or lvl > 80:
+        await ctx.send("Level needs to be between 1 and 80")
+        return
+
+    if len(name) > 15:
+        await ctx.send("Name too long 15 letters MAX")
+        return
+
+
 
     data = [index, name, lvl]
     await update_data(ctx.author, data)
