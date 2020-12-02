@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import json
+import requests
 import os
 import random
 
@@ -11,14 +12,34 @@ client = commands.Bot(command_prefix="e!")
 async def on_ready():
     print("Bot is ready")
 
-
+@client.command()
+@commands.has_role('storageHandler')
+async def create(ctx):
+    # we create json data if its not created
+    url = 'https://api.jsonbin.io/b'
+    headers = {
+        'Content-Type': 'application/json',
+        'secret-key': '$2b$10$c89s/iiSGakICOZ4K4Nl8uSNCpziZ9OutIp3VnCzaPZhHaFbocOs.'
+    }
+    users = await get_users_data()
+    req = requests.post(url, json=users, headers=headers)
+    print(req.text)
 
 @client.command()
-async def showT(ctx, member: discord.Member):
+@commands.has_role('storageHandler')
+async def update(ctx):
+    url = 'https://api.jsonbin.io/b/5fc6a83c9abe4f6e7cae4181'
+    headers = {'secret-key': '$2b$10$c89s/iiSGakICOZ4K4Nl8uSNCpziZ9OutIp3VnCzaPZhHaFbocOs.'}
+    users = await load_users()
+    await set_users_data(users)
+    req = requests.put(url, json=users, headers=headers)
+
+@client.command()
+async def show(ctx, member: discord.Member):
     await open_account(member)
 
     user = member
-    users = await get_users_data()
+    users = await load_users()
 
     em = discord.Embed(title=f"{member.name}'s troops formation info", color=discord.Color.red())
 
@@ -31,11 +52,13 @@ async def showT(ctx, member: discord.Member):
 
 @client.command()
 async def info(ctx):
-    await ctx.send("1-Set troops: e!setT index(1-6) troopName troopLvl(1-80)")
-    await ctx.send("2-Show Troops: e!showT @AnyPlayerName")
+    await ctx.send("1-Set troop command: e!set index(1-6) troopName troopLvl(1-80)")
+    await ctx.send("Example: e!set 1 Bulma 75")
+    await ctx.send("2-Show Troops command: e!show @AnyPlayerName")
+    await ctx.send("Example: e!show @shaun")
 
 @client.command()
-async def setT(ctx, index=None, name=None, lvl=None):
+async def set(ctx, index=None, name=None, lvl=None):
 
     await open_account(ctx.author)
     try:
@@ -62,8 +85,6 @@ async def setT(ctx, index=None, name=None, lvl=None):
         await ctx.send("Name too long 15 letters MAX")
         return
 
-
-
     data = [index, name, lvl]
     await update_data(ctx.author, data)
 
@@ -71,7 +92,7 @@ async def setT(ctx, index=None, name=None, lvl=None):
 
 
 async def open_account(user):
-    users = await get_users_data()
+    users = await load_users()
 
     if str(user.id) in users:
         return False
@@ -91,6 +112,29 @@ async def open_account(user):
 async def get_users_data():
     with open("data.json", "r") as f:
         users = json.load(f)
+    return users
+
+
+async def set_users_data(users):
+    # store changes
+    with open("data.json", "w") as f:
+        json.dump(users, f)
+
+async def load_users():
+    url = 'https://api.jsonbin.io/b/5fc6a83c9abe4f6e7cae4181'
+    headers = {'secret-key': '$2b$10$c89s/iiSGakICOZ4K4Nl8uSNCpziZ9OutIp3VnCzaPZhHaFbocOs.'}
+    users = await get_users_data()
+    # if information is missing we load from jsonbin and update it
+    if users == {}:
+        url = 'https://api.jsonbin.io/v3/b/5fc6a83c9abe4f6e7cae4181/latest'
+        headers = {
+            'X-Master-Key': '$2b$10$c89s/iiSGakICOZ4K4Nl8uSNCpziZ9OutIp3VnCzaPZhHaFbocOs.'
+        }
+        req = requests.get(url, json=None, headers=headers)
+        conv = json.loads(req.text)
+        await set_users_data(conv['record'])
+        users = await get_users_data()
+
     return users
 
 
